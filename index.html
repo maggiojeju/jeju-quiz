@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>제주항일기념관 — 비밀암호 탐험</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --gold:#b8860b; --blue:#1a3a5c; --brush:#2c1810; --stamp:#9b2335; --ink:#1a1208; }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans KR',sans-serif;min-height:100vh;color:var(--ink);}
+
+  /* 배경 레이어 */
+  .page-bg{
+    min-height:100vh;position:relative;
+    background-size:cover;background-position:center top;
+    background-attachment:fixed;
+    transition:background-image .5s ease;
+  }
+  /* 배경 없을 때 팀 색상 */
+  .page-bg.no-img{ background-color:var(--bg-color,#1a2a4a); }
+
+  .page-overlay{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:linear-gradient(to bottom,rgba(10,15,28,.55) 0%,rgba(10,15,28,.30) 40%,rgba(10,15,28,.45) 100%);
+  }
+  .page-content{position:relative;z-index:2;min-height:100vh;}
+
+  /* 헤더 */
+  .site-header{padding:2.2rem 1.5rem 1.2rem;text-align:center;}
+  .site-header h1{
+    font-family:'Noto Serif KR',serif;font-size:clamp(1.3rem,4vw,2rem);
+    font-weight:900;color:#f5e8c0;letter-spacing:4px;
+    text-shadow:0 2px 12px rgba(0,0,0,.6);margin-bottom:.3rem;
+  }
+  .site-header p{font-size:.85rem;color:rgba(245,232,192,.65);letter-spacing:2px;}
+  .header-rule{width:60px;height:2px;background:var(--gold);margin:.8rem auto 0;opacity:.6;}
+
+  /* 화면 전환 */
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  /* 팀 선택 */
+  #screen-team{max-width:640px;margin:0 auto;padding:1rem 1.5rem 3rem;}
+  .section-label{
+    text-align:center;font-family:'Noto Serif KR',serif;font-size:.88rem;
+    font-weight:700;color:rgba(245,232,192,.75);letter-spacing:3px;margin-bottom:1.4rem;
+  }
+  .team-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.8rem;margin-bottom:1.8rem;}
+  .team-btn{
+    background:rgba(255,252,245,.10);backdrop-filter:blur(10px);
+    border:1.5px solid rgba(184,134,11,.3);border-radius:14px;
+    padding:1.2rem .4rem .9rem;cursor:pointer;transition:all .2s;
+    font-family:'Noto Serif KR',serif;text-align:center;position:relative;overflow:hidden;
+  }
+  .team-btn::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--tc);opacity:.8;}
+  .team-btn:hover{background:rgba(255,252,245,.18);border-color:var(--tc);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.35);}
+  .team-btn.selected{background:rgba(255,252,245,.22);border-color:var(--tc);box-shadow:0 0 0 3px color-mix(in srgb,var(--tc) 35%,transparent);}
+  .team-letter{font-size:2.2rem;font-weight:900;color:var(--tc);display:block;line-height:1;margin-bottom:.25rem;text-shadow:0 2px 8px rgba(0,0,0,.4);}
+  .team-label{font-size:.68rem;color:rgba(245,232,192,.55);display:block;}
+  .start-btn{
+    display:block;width:100%;max-width:240px;margin:0 auto;
+    background:var(--gold);color:var(--brush);border:none;padding:.95rem 2rem;
+    font-size:1rem;font-family:'Noto Serif KR',serif;font-weight:700;
+    border-radius:10px;cursor:pointer;letter-spacing:3px;transition:all .2s;
+    box-shadow:0 4px 20px rgba(0,0,0,.4);
+  }
+  .start-btn:hover:not(:disabled){background:#d4a020;transform:translateY(-2px);}
+  .start-btn:disabled{background:rgba(255,255,255,.15);color:rgba(255,255,255,.3);cursor:not-allowed;box-shadow:none;}
+
+  /* 퀴즈 */
+  #screen-quiz{max-width:700px;margin:0 auto;padding:.5rem 1.5rem 3rem;}
+  .quiz-topbar{
+    display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;
+    padding:.75rem 1.1rem;background:rgba(10,15,28,.5);
+    backdrop-filter:blur(10px);border-radius:10px;border:1px solid rgba(184,134,11,.2);
+  }
+  .team-badge{background:var(--tc,var(--blue));color:white;padding:.25rem .9rem;border-radius:16px;font-family:'Noto Serif KR',serif;font-weight:700;font-size:.85rem;flex-shrink:0;}
+  .progress-wrap{flex:1;}
+  .progress-bar{height:5px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--gold);border-radius:3px;transition:width .4s ease;}
+  .progress-label{font-size:.72rem;color:rgba(245,232,192,.55);text-align:right;margin-top:.2rem;}
+
+  .q-card{
+    background:rgba(250,247,240,.97);border:1px solid rgba(184,134,11,.2);
+    border-radius:16px;padding:1.6rem 1.4rem 1.2rem;margin-bottom:1rem;
+    box-shadow:0 4px 24px rgba(0,0,0,.22);position:relative;
+    animation:fadeUp .3s ease both;
+  }
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  .q-num{position:absolute;top:-12px;left:1.2rem;background:var(--tc,var(--blue));color:white;padding:.12rem .85rem;border-radius:12px;font-size:.75rem;font-weight:700;}
+  .clue-row{display:flex;gap:.7rem;align-items:stretch;margin-bottom:.65rem;}
+  .clue-tag{writing-mode:vertical-rl;text-orientation:upright;font-size:.65rem;font-weight:700;letter-spacing:2px;padding:.45rem .4rem;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;min-width:28px;color:white;}
+  .clue-tag.path{background:var(--blue);}
+  .clue-tag.loc {background:var(--stamp);}
+  .clue-tag.q   {background:var(--brush);}
+  .clue-body{flex:1;background:#f7f3ea;border:1px solid #e5ddc8;border-radius:8px;padding:.6rem .85rem;font-size:.88rem;line-height:1.65;color:var(--ink);}
+  .clue-body img{display:block;max-width:100%;max-height:180px;object-fit:contain;border-radius:6px;margin-top:.5rem;}
+
+  .ans-area{margin-top:1.1rem;}
+  .blanks-row{display:flex;gap:4px;margin-bottom:.7rem;flex-wrap:wrap;}
+  .blank-cell{width:36px;height:36px;border:2px solid #ccc;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Noto Serif KR',serif;font-size:.95rem;font-weight:700;background:white;transition:all .15s;color:var(--blue);}
+  .blank-cell.filled{border-color:var(--tc,var(--blue));background:#f0f5fa;}
+  .ans-input{width:100%;padding:.7rem .9rem;font-size:.92rem;font-family:'Noto Sans KR',sans-serif;border:2px solid #ddd;border-radius:8px;outline:none;letter-spacing:2px;transition:border-color .2s;background:white;color:var(--ink);}
+  .ans-input:focus{border-color:var(--tc,var(--blue));}
+  .ans-input.ok  {border-color:#27ae60;background:#f2fbf5;}
+  .ans-input.fail{border-color:#e74c3c;background:#fff5f5;animation:shake .3s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+  .check-btn{margin-top:.65rem;background:var(--blue);color:white;border:none;padding:.65rem 1.6rem;border-radius:8px;font-size:.88rem;font-family:'Noto Sans KR',sans-serif;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s;}
+  .check-btn:hover:not(:disabled){background:var(--brush);}
+  .check-btn:disabled{background:#27ae60;cursor:default;}
+  .feedback{display:none;margin-top:.55rem;padding:.5rem .85rem;border-radius:7px;font-size:.85rem;font-weight:700;align-items:center;gap:.4rem;}
+  .feedback.show{display:flex;}
+  .feedback.ok  {background:#f0fbf4;color:#27ae60;border:1px solid #b0e8c0;}
+  .feedback.fail{background:#fff5f5;color:#e74c3c;border:1px solid #f8c0b8;}
+
+  /* 결과 */
+  #screen-result{max-width:520px;margin:0 auto;padding:1.5rem 1.5rem 3rem;text-align:center;}
+  .result-card{background:rgba(250,247,240,.97);border:1px solid rgba(184,134,11,.2);border-radius:20px;padding:2.2rem 1.8rem;box-shadow:0 8px 40px rgba(0,0,0,.32);margin-bottom:1.4rem;}
+  .result-seal{width:100px;height:100px;border:5px solid var(--stamp);border-radius:50%;margin:0 auto 1.3rem;display:flex;align-items:center;justify-content:center;position:relative;}
+  .result-seal::after{content:'';position:absolute;inset:7px;border:1.5px dashed var(--stamp);border-radius:50%;opacity:.45;}
+  .result-num{font-family:'Noto Serif KR',serif;font-size:2.6rem;font-weight:900;color:var(--stamp);line-height:1;}
+  .result-num small{font-size:.95rem;color:#999;}
+  .result-title{font-family:'Noto Serif KR',serif;font-size:1.3rem;font-weight:700;color:var(--blue);margin-bottom:.35rem;}
+  .result-desc{font-size:.88rem;color:#666;line-height:1.7;margin-bottom:1.4rem;}
+  .review-list{text-align:left;}
+  .review-item{display:flex;gap:.65rem;align-items:flex-start;padding:.55rem 0;border-bottom:1px solid #eee;font-size:.85rem;}
+  .review-item:last-child{border-bottom:none;}
+  .review-q{flex:1;color:#444;line-height:1.5;}
+  .review-a{font-weight:700;color:var(--blue);}
+  .back-btn{background:transparent;color:rgba(245,232,192,.9);border:1.5px solid rgba(245,232,192,.4);padding:.75rem 1.8rem;border-radius:10px;font-size:.92rem;font-family:'Noto Serif KR',serif;font-weight:700;cursor:pointer;letter-spacing:2px;transition:all .2s;backdrop-filter:blur(8px);}
+  .back-btn:hover{background:rgba(255,255,255,.12);border-color:var(--gold);color:var(--gold);}
+
+  /* 로딩 */
+  .loading{text-align:center;padding:3rem;color:rgba(245,232,192,.6);}
+  .spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(26,18,8,.95);color:#f5e8c0;padding:.7rem 1.4rem;border-radius:8px;font-size:.85rem;border:1px solid rgba(184,134,11,.4);z-index:999;transition:transform .3s ease;pointer-events:none;backdrop-filter:blur(12px);}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+
+  @media(max-width:560px){
+    .team-grid{grid-template-columns:repeat(3,1fr);}
+    #screen-quiz,#screen-team,#screen-result{padding-left:1rem;padding-right:1rem;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page-bg no-img" id="page-bg">
+  <div class="page-overlay"></div>
+  <div class="page-content">
+
+    <div class="site-header">
+      <h1>제주항일기념관 비밀암호 탐험</h1>
+      <p>4학년 학생들이 만든 박물관 방탈출 퀴즈</p>
+      <div class="header-rule"></div>
+    </div>
+
+    <!-- 팀 선택 -->
+    <div id="screen-team" class="screen active">
+      <p class="section-label">— 탐험할 팀을 선택하세요 —</p>
+      <div id="team-grid" class="team-grid"></div>
+      <button class="start-btn" id="start-btn" disabled onclick="startQuiz()">탐험 시작 →</button>
+    </div>
+
+    <!-- 퀴즈 -->
+    <div id="screen-quiz" class="screen">
+      <div class="quiz-topbar">
+        <span class="team-badge" id="quiz-badge">A팀</span>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+          <div class="progress-label" id="prog-label">0 / 6</div>
+        </div>
+      </div>
+      <div id="q-container"></div>
+    </div>
+
+    <!-- 결과 -->
+    <div id="screen-result" class="screen">
+      <div class="result-card">
+        <div class="result-seal"><div class="result-num" id="r-score">0<small>/6</small></div></div>
+        <div class="result-title" id="r-title">탐험 완료!</div>
+        <div class="result-desc"  id="r-desc"></div>
+        <div class="review-list"  id="r-review"></div>
+      </div>
+      <button class="back-btn" onclick="goBack()">← 처음으로 돌아가기</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+/* ★ Firebase 설정 */
+const firebaseConfig = {
+  apiKey:            "AIzaSyBm1eKDZF11LSIVScohC4UikGJt_6xE2UM",
+  authDomain:        "jeju-antijapanse.firebaseapp.com",
+  databaseURL:       "https://jeju-antijapanse-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "jeju-antijapanse",
+  storageBucket:     "jeju-antijapanse.firebasestorage.app",
+  messagingSenderId: "304584050170",
+  appId:             "1:304584050170:web:b7534f22acb15831fb5043"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+const TEAMS = ['A','B','C','D','E'];
+const TC    = { A:'#c0392b', B:'#2980b9', C:'#27ae60', D:'#8e44ad', E:'#e67e22' };
+const BG_COLOR = { A:'#3a1010', B:'#0e2035', C:'#0e2a1a', D:'#25103a', E:'#3a1f08' };
+const MSGS = ['계속 도전해 보세요!','역사를 배워가고 있어요!','훌륭한 탐험가예요!','역사 탐정이 되었군요!','완벽한 탐험!','전설의 역사 탐정!'];
+
+let sel=null, qs=[], ok={};
+let bgCache   = {};
+let cardCache = {};
+
+/* ── 배경/카드 URL 실시간 구독 ── */
+TEAMS.forEach(t => {
+  onValue(ref(db, `backgrounds/${t}`), snap => {
+    bgCache[t] = snap.val() || {};
+    if (sel === t) applyBg(t, currentScreen());
+  });
+  onValue(ref(db, `cards/${t}`), snap => {
+    cardCache[t] = snap.val() || {};
+    if (sel === t && document.getElementById('screen-quiz').classList.contains('active')) {
+      applyCardBgs(t);
+    }
+  });
+});
+
+function currentScreen() {
+  if (document.getElementById('screen-quiz').classList.contains('active'))   return 2;
+  if (document.getElementById('screen-result').classList.contains('active')) return 3;
+  return 1;
+}
+
+function applyBg(t, n) {
+  const bg = document.getElementById('page-bg');
+  const url = bgCache[t]?.[n];
+  if (url) {
+    bg.style.backgroundImage = `url('${url}')`;
+    bg.classList.remove('no-img');
+  } else {
+    bg.style.backgroundImage = 'none';
+    bg.classList.add('no-img');
+    bg.style.setProperty('--bg-color', BG_COLOR[t] || '#1a2a4a');
+  }
+}
+
+function applyCardBgs(t) {
+  if (!cardCache[t]) return;
+  qs.forEach((_, i) => {
+    const bg = document.getElementById(`qcardbg-${i}`);
+    if (!bg) return;
+    const url = cardCache[t]?.[i+1];
+    bg.style.backgroundImage = url ? `url('${url}')` : 'none';
+  });
+}
+
+function resetBg() {
+  const bg = document.getElementById('page-bg');
+  bg.style.backgroundImage = 'none';
+  bg.classList.add('no-img');
+  bg.style.setProperty('--bg-color','#1a2a4a');
+}
+
+/* ── 팀 버튼 ── */
+document.getElementById('team-grid').innerHTML = TEAMS.map(t=>
+  `<button class="team-btn" style="--tc:${TC[t]}"
+           onclick="pick('${t}')" id="tb-${t}">
+     <span class="team-letter">${t}</span>
+     <span class="team-label">${t}팀</span>
+   </button>`
+).join('');
+
+window.pick = t => {
+  sel = t;
+  TEAMS.forEach(x=>document.getElementById(`tb-${x}`).classList.remove('selected'));
+  document.getElementById(`tb-${t}`).classList.add('selected');
+  document.getElementById('start-btn').disabled = false;
+  document.documentElement.style.setProperty('--tc', TC[t]);
+  applyBg(t, 1);
+};
+
+/* ── 퀴즈 시작 ── */
+window.startQuiz = async () => {
+  if (!sel) return;
+  show('quiz');
+  applyBg(sel, 2);
+  document.getElementById('q-container').innerHTML =
+    `<div class="loading"><div class="spinner"></div>문제를 불러오는 중…</div>`;
+  document.getElementById('quiz-badge').textContent = sel+'팀';
+  document.getElementById('quiz-badge').style.background = TC[sel];
+
+  try {
+    const snap = await get(ref(db, `questions/${sel}`));
+    if (!snap.exists()||!snap.val().length) {
+      document.getElementById('q-container').innerHTML =
+        `<div class="loading">아직 이 팀의 문제가 준비되지 않았습니다.</div>`;
+      return;
+    }
+    qs = snap.val(); ok = {};
+    renderQuiz();
+  } catch(e) {
+    document.getElementById('q-container').innerHTML =
+      `<div class="loading">불러오기 실패. 인터넷을 확인해 주세요.</div>`;
+  }
+};
+
+function renderQuiz() {
+  document.getElementById('q-container').innerHTML = qs.map((q,i)=>{
+    const n = (q.answer||'').replace(/\s/g,'').length || 2;
+    const blanks = Array.from({length:n},(_,j)=>
+      `<div class="blank-cell" id="bc-${i}-${j}"></div>`).join('');
+    const pathImg = q.pathImg ? `<img src="${q.pathImg}" alt="길잡이 이미지">` : '';
+    const locImg  = q.locImg  ? `<img src="${q.locImg}"  alt="위치 이미지">` : '';
+    return `
+    <div class="q-card" id="qcard-${i}" style="position:relative;overflow:hidden;">
+      <div class="q-card-bg" id="qcardbg-${i}" style="position:absolute;inset:0;background-size:cover;background-position:center;opacity:0.18;border-radius:16px;pointer-events:none;"></div>
+      <div class="q-num" style="background:${TC[sel]||'var(--blue)'}">${i+1}번 암호</div>
+      <div class="clue-row">
+        <div class="clue-tag path">길잡이</div>
+        <div class="clue-body">${(q.pathClue||'—').replace(/\n/g,'<br>')}${pathImg}</div>
+      </div>
+      <div class="clue-row">
+        <div class="clue-tag loc">위치</div>
+        <div class="clue-body">${(q.locClue||'—').replace(/\n/g,'<br>')}${locImg}</div>
+      </div>
+      <div class="clue-row">
+        <div class="clue-tag q">문제</div>
+        <div class="clue-body">${(q.question||'—').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div class="ans-area">
+        <div class="blanks-row">${blanks}</div>
+        <input type="text" class="ans-input" id="ai-${i}"
+               placeholder="답을 입력하고 Enter" maxlength="30"
+               oninput="fillB(${i})"
+               onkeydown="if(event.key==='Enter') chk(${i})">
+        <button class="check-btn" id="cb-${i}" onclick="chk(${i})">정답 확인</button>
+        <div class="feedback" id="fb-${i}"></div>
+      </div>
+    </div>`;
+  }).join('');
+  updProg();
+  setTimeout(() => applyCardBgs(sel), 100);
+}
+
+window.fillB = i => {
+  const v = document.getElementById(`ai-${i}`).value;
+  const n = (qs[i].answer||'').replace(/\s/g,'').length||2;
+  for(let j=0;j<n;j++){
+    const el=document.getElementById(`bc-${i}-${j}`);
+    if(!el)continue;
+    el.textContent=v[j]||''; el.classList.toggle('filled',!!v[j]);
+  }
+};
+
+window.chk = i => {
+  if(ok[i])return;
+  const inp=document.getElementById(`ai-${i}`);
+  const fb =document.getElementById(`fb-${i}`);
+  const btn=document.getElementById(`cb-${i}`);
+  const v=inp.value.trim();
+  if(!v){toast('답을 입력해 주세요!');return;}
+  const ans=(qs[i].answer||'').replace(/\s/g,'');
+  const pass=v.replace(/\s/g,'')=== ans;
+  inp.classList.remove('ok','fail'); fb.classList.remove('show','ok','fail');
+  if(pass){
+    inp.classList.add('ok'); fb.className='feedback show ok'; fb.innerHTML='✅ 정답입니다!';
+    btn.disabled=true; btn.textContent='✓ 정답'; ok[i]=true;
+  } else {
+    inp.classList.add('fail'); fb.className='feedback show fail'; fb.innerHTML='❌ 틀렸습니다. 다시 도전해 보세요!';
+  }
+  updProg();
+  if(Object.keys(ok).length===qs.length) setTimeout(showResult,700);
+};
+
+function updProg(){
+  const d=Object.keys(ok).length,t=qs.length;
+  document.getElementById('prog-fill').style.width=`${(d/t)*100}%`;
+  document.getElementById('prog-label').textContent=`${d} / ${t}`;
+}
+
+function showResult(){
+  const n=Object.keys(ok).length,t=qs.length;
+  show('result');
+  applyBg(sel,3);
+  document.getElementById('r-score').innerHTML=`${n}<small>/${t}</small>`;
+  document.getElementById('r-title').textContent=MSGS[n]||'탐험 완료!';
+  document.getElementById('r-desc').textContent=`${sel}팀 암호 ${t}개 중 ${n}개 해독 완료!`;
+  document.getElementById('r-review').innerHTML=qs.map((q,i)=>
+    `<div class="review-item">
+       <span>${ok[i]?'✅':'❌'}</span>
+       <div class="review-q">${(q.question||'').split('\n')[0]}<br>
+         <span class="review-a">정답: ${q.answer||'—'}</span></div>
+     </div>`
+  ).join('');
+}
+
+window.goBack = ()=>{
+  sel=null; qs=[]; ok={};
+  document.getElementById('start-btn').disabled=true;
+  TEAMS.forEach(t=>document.getElementById(`tb-${t}`)?.classList.remove('selected'));
+  resetBg(); show('team');
+};
+
+function show(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+}
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2400);
+}
+</script>
+</body>
+</html>
